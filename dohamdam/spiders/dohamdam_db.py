@@ -24,8 +24,11 @@ class DB:
         self.connection.commit()
 
     def exist(self,person_id):
-        return self.cursor.execute(f'''SELECT EXISTS(
+        print(f'''SELECT EXISTS(
             SELECT id from dohamdam where user="{self.user}" AND person_id="{person_id}"
+        )''')
+        return self.cursor.execute(f'''SELECT EXISTS(
+            SELECT id from dohamdam where user={self.user} AND person_id={person_id}
         )''').fetchone() == (1,)
 
     def __del__(self):
