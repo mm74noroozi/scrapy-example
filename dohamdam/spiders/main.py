@@ -1,31 +1,56 @@
 import scrapy
-from dohamdam.items import DohamdamItem
+from dohamdam.spiders.dohamdam_db import DB 
+from time import sleep
+from decouple import config
+
+domain = config("domain")
+user = config("user")
+password = config("password")
+search_filters = config("search_filters")
+discord = config("discord")
+session = DB(user)
 
 class QuotesSpider(scrapy.Spider):
     name = "dohamdam"
     start_urls = [
-        'http://oruv.ir/',
+        f'{domain}/',
     ]
     completed=[]
+    def __init__(self, name=None, **kwargs):
+        super().__init__(name, **kwargs)
+        self.unread=0
+
+
     def parse(self, response):
         token = response.css('#sec1').attrib['value']+response.css('#sec7').attrib['value']+response.css('#sec4').attrib['value']+response.css('#sec5').attrib['value']+response.css('#sec2').attrib['value']+response.css('#sec3').attrib['value']+response.css('#sec6').attrib['value']
         yield scrapy.FormRequest.from_response(
             response
-            ,formdata={"myusername":"a.khatami70@gmail.com","mypassword":"neverhood0111","St2":token},
-            callback=self.go_to_index2
+            ,formdata={"myusername":user,"mypassword":password,"St2":token},
+            callback=self.get_number_of_pages
         )
+    def get_number_of_pages(self, response):
+        yield scrapy.Request(f'{domain}/search_prof.php?{search_filters}&min=0&page=12',callback=self.go_to_index2)
 
     def go_to_index2(self, response):
-        for i in range(50):
-            yield scrapy.Request(f'http://oruv.ir/search_prof.php?sel=1&op=3&sen1=1219&sen2=30&vez=1219&ostan=441&city=442&picu=1219&vsalamat=1219&tah=1219&vesht=1219&ghad1=1219&ghad2=1219&vazn1=1219&vazn2=1219&postrang=1219&dkhan1=1219&dkhan2=1219&dhamsar1=1219&dhamsar2=1219&vmaskan=1219&vmashin=1219&dinm=1219&eteghad=1219&vhejab=1219&min={i*12}&page=12',callback=self.page)
+        number_of_pages = response.css(".content >p >b::text").getall()[1]
+        self.logger.info(f"number of pages : {number_of_pages}")
+        yield scrapy.Request(f'{domain}/index2.php',callback=self.check_new_message)
+        # for i in range(number_of_pages):
+        #     yield scrapy.Request(f'{domain}/search_prof.php?{search_filters}&min={i*12}&page=12',callback=self.page)
+        while True:
+            yield scrapy.Request(f'{domain}/search_prof.php?{search_filters}&min=0&page=12',callback=self.page)
+            sleep(30)
+            yield scrapy.Request(f'{domain}/index2.php',callback=self.check_new_message)
+            
 
     def page(self,response):
         persons= response.css(".tooltip")
         for person in persons:
             personId = person.attrib['href'].split("=")[1]
-            if personId not in self.completed:
+            if not session.exist(person_id=personId):
                 self.completed.append(personId)
-                yield scrapy.Request(f'http://oruv.ir/send_msg.php?uid={personId}&op=2',callback=self.send_msg, meta={'personId': personId})
+                yield scrapy.Request(f'{domain}/send_msg.php?uid={personId}&op=2',callback=self.send_msg, meta={'personId': personId})
+    
     def send_msg(self,response):
         personId = response.meta.get('personId')
         token = response.css('#sec1').attrib['value']+response.css('#sec7').attrib['value']+response.css('#sec4').attrib['value']+response.css('#sec5').attrib['value']+response.css('#sec2').attrib['value']+response.css('#sec3').attrib['value']+response.css('#sec6').attrib['value']
@@ -35,8 +60,16 @@ class QuotesSpider(scrapy.Spider):
             callback=self.save,
             meta={'personId': personId}
         )
+
     def save(self,response):
         personId = response.meta.get('personId')
-        item = DohamdamItem()
-        item['id']= personId
-        yield item
+        session.insert(personId,is_left=0,number_of_tries=1)
+
+    def check_new_message(self,response):
+        new_unread = int(response.css("#padd >div> a ::text").getall()[4].replace("پيامهاي دريافتي (","").replace(")",""))
+        if new_unread > self.unread :
+            self.logger.info(f"{new_unread} new unread messages!")
+            yield scrapy.FormRequest(url=discord,formdata={"content":f"{new_unread} new unread messages!"})
+        self.unread = new_unread
+
+        
