@@ -32,7 +32,7 @@ class QuotesSpider(scrapy.Spider):
         yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min=0&page=12',dont_filter=True,callback=self.go_to_index2)
 
     def go_to_index2(self, response):
-        number_of_pages = response.css(".content >p >b::text").getall()[1]
+        number_of_pages = int(response.css(".content >p >b::text").getall()[1])
         self.logger.info(f"number of pages : {number_of_pages}")
         yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.check_new_message)
         while True:
