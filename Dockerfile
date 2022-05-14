@@ -1,4 +1,4 @@
 from python:3.10
 WORKDIR /app
 ADD requirements.txt .
-CMD [ "scrapy crawl dohamdam" ]
+CMD [ "/bin/bash scrapy crawl dohamdam" ]
