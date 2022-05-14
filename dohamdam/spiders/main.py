@@ -36,12 +36,10 @@ class QuotesSpider(scrapy.Spider):
         self.logger.info(f"number of pages : {number_of_pages}")
         yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.check_new_message)
         while True:
-            number_of_pages=2
             for i in range(number_of_pages):
                 yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min={i*12}&page=12',dont_filter=True,callback=self.page)
             sleep(30)
             yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.check_new_message)
-            break
             
 
     def page(self,response):
