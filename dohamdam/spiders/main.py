@@ -35,11 +35,9 @@ class QuotesSpider(scrapy.Spider):
     def go_to_index2(self, response):
         number_of_pages = int(response.css("#padd font ::text").getall()[2])//12+1
         self.logger.info(f"number of pages : {number_of_pages}")
-        for i in range(number_of_pages):
-            yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min={i*12}&page=12',dont_filter=True,callback=self.page)
-            if i%15 ==0:
-                yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.check_new_message)
-        yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.go_to_index2)    
+        yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min=0&page=12',
+                                meta={"page":1,"number_of_pages":number_of_pages},dont_filter=True,callback=self.page)
+          
 
     def page(self,response):
         persons= response.css(".tooltip")
@@ -47,13 +45,25 @@ class QuotesSpider(scrapy.Spider):
             personId = person.attrib['href'].split("=")[1]
             if not session.exist(person_id=personId):
                 yield scrapy.Request(f'{domain}/send_msg.php?uid={personId}&op=2',callback=self.send_msg, meta={'personId': personId})
-    
+            else:
+                self.logger.info(f"skipped {personId}")
+        if page%15 ==0:
+                yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.check_new_message)
+        page = response.meta.get('page')
+        number_of_pages = response.meta.get('number_of_pages')
+        if page< number_of_pages:
+            yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min={page*12}&page=12',meta={"page":page+1},dont_filter=True,callback=self.page)
+        else:
+            yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.go_to_index2)  
+        
+        
     def send_msg(self,response):
         personId = response.meta.get('personId')
         try:
             token = response.css('#sec1').attrib['value']+response.css('#sec7').attrib['value']+response.css('#sec4').attrib['value']+response.css('#sec5').attrib['value']+response.css('#sec2').attrib['value']+response.css('#sec3').attrib['value']+response.css('#sec6').attrib['value']
         except:
             session.insert(personId,is_left=1,number_of_tries=1)
+            self.logger(f"unavailble {personId}")
         yield scrapy.FormRequest.from_response(
             response
             ,formdata={"security_token2":token,'title':'سلام وقت بخیر','message':"قصد اشنایی با شما رو دارم. مایلید با هم بیشتر صحبت کنیم؟"},
