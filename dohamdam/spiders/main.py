@@ -30,19 +30,16 @@ class QuotesSpider(scrapy.Spider):
             callback=self.get_number_of_pages
         )
     def get_number_of_pages(self, response):
-        while True:
-            yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.go_to_index2)
-            sleep(30)
+        yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.go_to_index2)
         
     def go_to_index2(self, response):
         number_of_pages = int(response.css("#padd font ::text").getall()[2])//12+1
         self.logger.info(f"number of pages : {number_of_pages}")
         for i in range(number_of_pages):
             yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min={i*12}&page=12',dont_filter=True,callback=self.page)
-            sleep(2)
             if i%15 ==0:
                 yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.check_new_message)
-            
+        yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.go_to_index2)    
 
     def page(self,response):
         persons= response.css(".tooltip")
