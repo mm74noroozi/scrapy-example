@@ -48,11 +48,11 @@ class QuotesSpider(scrapy.Spider):
             else:
                 self.logger.info(f"skipped {personId}")
         page = response.meta.get('page')
+        number_of_pages = response.meta.get('number_of_pages')
         if page%15 ==0:
                 yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.check_new_message)
-        number_of_pages = response.meta.get('number_of_pages')
         if page< number_of_pages:
-            yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min={page*12}&page=12',meta={"page":page+1},dont_filter=True,callback=self.page)
+            yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min={page*12}&page=12',meta={"page":page+1,"number_of_pages":number_of_pages},dont_filter=True,callback=self.page)
         else:
             yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.go_to_index2)  
         
