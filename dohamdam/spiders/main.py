@@ -63,7 +63,7 @@ class QuotesSpider(scrapy.Spider):
             token = response.css('#sec1').attrib['value']+response.css('#sec7').attrib['value']+response.css('#sec4').attrib['value']+response.css('#sec5').attrib['value']+response.css('#sec2').attrib['value']+response.css('#sec3').attrib['value']+response.css('#sec6').attrib['value']
         except:
             session.insert(personId,is_left=1,number_of_tries=1)
-            self.logger(f"unavailble {personId}")
+            self.logger.info(f"unavailble {personId}")
         yield scrapy.FormRequest.from_response(
             response
             ,formdata={"security_token2":token,'title':'سلام وقت بخیر','message':"قصد اشنایی با شما رو دارم. مایلید با هم بیشتر صحبت کنیم؟"},
