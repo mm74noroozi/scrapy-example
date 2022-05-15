@@ -32,7 +32,7 @@ class QuotesSpider(scrapy.Spider):
     def get_number_of_pages(self, response):
         while True:
             yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.go_to_index2)
-            sleep(300)
+            sleep(30)
         
     def go_to_index2(self, response):
         number_of_pages = int(response.css("#padd font ::text").getall()[2])//12+1
