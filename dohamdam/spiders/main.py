@@ -4,11 +4,12 @@ from time import sleep
 from decouple import config
 
 domain = config("domain")
-username = config("username")
+username = config("user")
 password = config("password")
 search_filters = config("search_filters")
 discord = config("discord")
 session = DB(username)
+
 
 class QuotesSpider(scrapy.Spider):
     name = "dohamdam"
@@ -29,18 +30,17 @@ class QuotesSpider(scrapy.Spider):
             callback=self.get_number_of_pages
         )
     def get_number_of_pages(self, response):
-        yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min=0&page=12',dont_filter=True,callback=self.go_to_index2)
-
-    def go_to_index2(self, response):
-        number_of_pages = int(response.css(".content >p >b::text").getall()[1])
-        self.logger.info(f"number of pages : {number_of_pages}")
-        yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.check_new_message)
         while True:
-            for i in range(number_of_pages):
-                yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min={i*12}&page=12',dont_filter=True,callback=self.page)
-                sleep(2)
-                if i%15 ==0:
-                    yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.check_new_message)
+            yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.go_to_index2)
+        
+    def go_to_index2(self, response):
+        number_of_pages = int(response.css("#padd font ::text").getall()[2])//12+1
+        self.logger.info(f"number of pages : {number_of_pages}")
+        for i in range(number_of_pages):
+            yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min={i*12}&page=12',dont_filter=True,callback=self.page)
+            sleep(2)
+            if i%15 ==0:
+                yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.check_new_message)
             
 
     def page(self,response):
@@ -52,7 +52,10 @@ class QuotesSpider(scrapy.Spider):
     
     def send_msg(self,response):
         personId = response.meta.get('personId')
-        token = response.css('#sec1').attrib['value']+response.css('#sec7').attrib['value']+response.css('#sec4').attrib['value']+response.css('#sec5').attrib['value']+response.css('#sec2').attrib['value']+response.css('#sec3').attrib['value']+response.css('#sec6').attrib['value']
+        try:
+            token = response.css('#sec1').attrib['value']+response.css('#sec7').attrib['value']+response.css('#sec4').attrib['value']+response.css('#sec5').attrib['value']+response.css('#sec2').attrib['value']+response.css('#sec3').attrib['value']+response.css('#sec6').attrib['value']
+        except:
+            session.insert(personId,is_left=1,number_of_tries=1)
         yield scrapy.FormRequest.from_response(
             response
             ,formdata={"security_token2":token,'title':'سلام وقت بخیر','message':"قصد اشنایی با شما رو دارم. مایلید با هم بیشتر صحبت کنیم؟"},
