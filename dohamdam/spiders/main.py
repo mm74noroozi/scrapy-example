@@ -35,7 +35,7 @@ class QuotesSpider(scrapy.Spider):
     def go_to_index2(self, response):
         number_of_pages = int(response.css("#padd font ::text").getall()[2])//12+1
         self.logger.info(f"number of pages : {number_of_pages}")
-        yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min=0&page=12',
+        yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=1&{search_filters}&min=0&page=12',
                                 meta={"page":1,"number_of_pages":number_of_pages},dont_filter=True,callback=self.page)
           
 
@@ -52,7 +52,7 @@ class QuotesSpider(scrapy.Spider):
         if page%15 ==0:
                 yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.check_new_message)
         if page< number_of_pages:
-            yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=&{search_filters}&min={page*12}&page=12',meta={"page":page+1,"number_of_pages":number_of_pages},dont_filter=True,callback=self.page)
+            yield scrapy.Request(f'{domain}/search_prof.php?op=3&sel=1&{search_filters}&min={page*12}&page=12',meta={"page":page+1,"number_of_pages":number_of_pages},dont_filter=True,callback=self.page)
         else:
             yield scrapy.Request(f'{domain}/index2.php',dont_filter=True,callback=self.go_to_index2)  
         
